@@ -57,6 +57,13 @@ type docInfo struct {
 		} `json:"channelDs"`
 		Oem       string `json:"oem"`
 		ChannelUs struct {
+			Docsis31 []struct {
+				PowerLevel string `json:"powerLevel"`
+				Type       string `json:"type"`
+				Channel    int    `json:"channel"`
+				ChannelID  int    `json:"channelID"`
+				Frequency  string `json:"frequency"`
+			} `json:"docsis31"`
 			Docsis30 []struct {
 				PowerLevel string `json:"powerLevel"`
 				Type       string `json:"type"`
@@ -153,7 +160,8 @@ func setMetrics(data *docInfo) {
 		}
 		powerLevelData, _ := strconv.ParseFloat(channel.PowerLevel, 64)
 		powerLevel.With(labels).Set(powerLevelData)
-		connectionTypeData, _ := strconv.ParseFloat(strings.TrimSuffix(channel.Type, "QAM"), 64)
+		connectionTypeData, _ := strconv.ParseFloat(strings.TrimSuffix(channel.Type, "K"), 64)
+		connectionTypeData *= 1024
 		connectionType.With(labels).Set(connectionTypeData)
 	}
 	for _, channel := range data.Data.ChannelUs.Docsis30 {
@@ -167,6 +175,20 @@ func setMetrics(data *docInfo) {
 		powerLevelData, _ := strconv.ParseFloat(channel.PowerLevel, 64)
 		powerLevel.With(labels).Set(powerLevelData)
 		connectionTypeData, _ := strconv.ParseFloat(strings.TrimSuffix(channel.Type, "QAM"), 64)
+		connectionType.With(labels).Set(connectionTypeData)
+	}
+	for _, channel := range data.Data.ChannelUs.Docsis31 {
+		labels := prometheus.Labels{
+			"channel":       strconv.Itoa(channel.Channel),
+			"channelID":     strconv.Itoa(channel.ChannelID),
+			"direction":     "upstream",
+			"frequency":     channel.Frequency,
+			"docsisVersion": "3.1",
+		}
+		powerLevelData, _ := strconv.ParseFloat(channel.PowerLevel, 64)
+		powerLevel.With(labels).Set(powerLevelData)
+		connectionTypeData, _ := strconv.ParseFloat(strings.TrimSuffix(channel.Type, "K"), 64)
+		connectionTypeData *= 1024
 		connectionType.With(labels).Set(connectionTypeData)
 	}
 }
